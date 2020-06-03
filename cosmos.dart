@@ -11,12 +11,12 @@ class Cosmos{
 
   Cosmos({this.documentDBMasterKey});
 
- Future queryCosmos(url, method) async{
+ Future queryCosmos({url, method, body}) async{
     String auth;
     String documentDBMasterKey = this.documentDBMasterKey;
     print("mastKey: $documentDBMasterKey");
 
-    method = method.trim(); //GET or POST
+    method = method.trim(); //GET, POST, PUT or DEL
     url = url.trim();
     String utcString = HttpDate.format(DateTime.now());
     
@@ -94,7 +94,20 @@ print('auth= $auth');
     'Authorization': auth,
     'x-ms-date': utcString
   };
-  var response = await http.get(url, headers: headers);
+  
+  var response;
+  if (method=='GET'){
+    response = await http.get(url, headers: headers);
+  }
+  else if (method=='POST'){
+    response = await http.post(url, headers: headers, body: body);
+  }
+  else if (method=='PUT'){
+    response = await http.put(url, headers: headers, body: body);
+  }
+  else if (method=='DEL'){
+    response = await http.delete(url, headers: headers);
+  }
   String data = response.body;
   return data;
   }
