@@ -1,10 +1,9 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:async';
 import 'dart:core';
 import 'package:crypto/crypto.dart';
-import 'package:http/http.dart' as http;
 import 'package:hex/hex.dart';
-
 
 class Cosmos{
   String documentDBMasterKey;
@@ -30,7 +29,6 @@ class Cosmos{
 
     print('stripped Url: $strippedurl');
 
-
     List strippedparts = strippedurl.split('/');
     int truestrippedcount = strippedparts.length - 1;
     print('$truestrippedcount');
@@ -48,7 +46,6 @@ class Cosmos{
         resourceId = strippedurl.substring(1, lastPart);
         print('ResourceId: ' + resourceId); 
       }
-
     }
     else{
       print('even');
@@ -70,7 +67,7 @@ class Cosmos{
 
   String text = (verb ?? '').toLowerCase() + '\n' + 
                 (resType ?? '').toLowerCase() + '\n' +
-                (resourceId ?? '').toLowerCase() + '\n' +
+                (resourceId ?? '') + '\n' +
                 (date ?? '').toLowerCase() + '\n' +
                 '' + '\n';
 
@@ -88,28 +85,54 @@ var tokenVersion = "1.0";
 auth = Uri.encodeComponent('type=' + masterToken + '&ver=' + tokenVersion + '&sig=' + base64Bits);
 print('auth= $auth');
 
-  final headers = {
+  Map<String, String> headers = {
     'Accept': 'application/json',
     'x-ms-version': '2016-07-11',
     'Authorization': auth,
-    'x-ms-date': utcString
+    'x-ms-date': utcString,
+    'x-ms-documentdb-isquery' : 'true',
+    'Content-Type' : 'application/query+json',
+    'x-ms-documentdb-query-enablecrosspartition' : 'true',
   };
   
-  var response;
+  Future<String> readResponse(HttpClientResponse response) {
+  final completer = Completer<String>();
+  final contents = StringBuffer();
+  response.transform(utf8.decoder).listen((data) {
+    contents.write(data);
+  }, onDone: () => completer.complete(contents.toString()));
+  return completer.future;
+}
+
+  HttpClientRequest request;
+  HttpClient httpClient = new HttpClient();
   if (method=='GET'){
-    response = await http.get(url, headers: headers);
+    request = await httpClient.getUrl(Uri.parse(url));
   }
-  else if (method=='POST'){
-    response = await http.post(url, headers: headers, body: body);
+  else if(method=='POST'){
+    request = await httpClient.postUrl(Uri.parse(url));
   }
-  else if (method=='PUT'){
-    response = await http.put(url, headers: headers, body: body);
+  else if(method=='PUT'){
+    request = await httpClient.putUrl(Uri.parse(url));
   }
-  else if (method=='DEL'){
-    response = await http.delete(url, headers: headers);
+  else if(method=='DEL'){
+    request = await httpClient.deleteUrl(Uri.parse(url));
   }
-  String data = response.body;
-  return data;
+    headers.forEach((key, value) {
+      request.headers.set(key,value);
+    });
+
+    if(body != null) {
+      request.add(utf8.encode(json.encode(body)));
+    }
+
+    HttpClientResponse aresponse = await request.close();
+    httpClient.close();
+  String aresponseString = await readResponse(aresponse);
+  print('stop');
+  
+  return jsonDecode(aresponseString);
+
   }
 }
 
