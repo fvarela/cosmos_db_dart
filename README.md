@@ -1,5 +1,5 @@
 # cosmos_db_dart
-Dart class for handling connection to Azure Cosmos DB using Dart
+Dart class for handling connection to Azure Cosmos DB
 
 ## Usage  
 **Import the class**  
